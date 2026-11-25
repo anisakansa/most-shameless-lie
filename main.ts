@@ -25,7 +25,7 @@
 // (1-5 words, 1-88 characters, one line, no trailing newline) and
 // fails loudly instead of shipping an invalid entry.
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const LIE = "I deleted it. Blamed you.";
 
@@ -46,6 +46,8 @@ if (LIE.includes("\n") || LIE.trim() !== LIE) {
 // cwd-relative path as well, so the entry is found whichever
 // layout the grader's sandbox uses. Both writes carry the
 // same bytes; a failure of either one alone is tolerated.
+// Each write is read back and compared byte for byte, so a
+// silent partial write can never ship an invalid entry.
 let wrote = 0;
 for (const target of ["/output/entry.txt", "output/entry.txt"]) {
   try {
@@ -53,6 +55,9 @@ for (const target of ["/output/entry.txt", "output/entry.txt"]) {
       recursive: true,
     });
     writeFileSync(target, LIE, "utf8");
+    if (readFileSync(target, "utf8") !== LIE) {
+      throw new Error(`read-back mismatch on ${target}`);
+    }
     wrote += 1;
   } catch {
     // The other path is the fallback; keep going.
